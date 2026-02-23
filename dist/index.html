@@ -1,76 +1,236 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工業計算機</title>
   <link rel="stylesheet" href="./style.css">
-
 </head>
 <body>
-<!-- partial:index.partial.html -->
-<!DOCTYPE html>
-<html>
-<head>
-    <title>rouaa老師的簡易計算機</title>
-    <style>
-        input[type="button"] {
-            width: 50px;
-            height: 50px;
-        }
-        input[type="text"] {
-            width: 200px;
-            height: 50px;
-        }
-    </style>
-</head>
-<body>
-    <h1>rouaa老師的簡易計算機</h1>
-  <hr>
-   <hr>
-     <hr>
-    <input type="text" id="display" readonly>
-    <br>
-    <input type="button" value="1" onclick="appendToDisplay('1')">
-    <input type="button" value="2" onclick="appendToDisplay('2')">
-    <input type="button" value="3" onclick="appendToDisplay('3')">
-    <input type="button" value="+" onclick="appendToDisplay('+')">
-    <br>
-    <input type="button" value="4" onclick="appendToDisplay('4')">
-    <input type="button" value="5" onclick="appendToDisplay('5')">
-    <input type="button" value="6" onclick="appendToDisplay('6')">
-    <input type="button" value="-" onclick="appendToDisplay('-')">
-    <br>
-    <input type="button" value="7" onclick="appendToDisplay('7')">
-    <input type="button" value="8" onclick="appendToDisplay('8')">
-    <input type="button" value="9" onclick="appendToDisplay('9')">
-    <input type="button" value="*" onclick="appendToDisplay('*')">
-    <br>
-    <input type="button" value="0" onclick="appendToDisplay('0')">
-    <input type="button" value="C" onclick="clearDisplay()">
-    <input type="button" value="=" onclick="calculate()">
-    <input type="button" value="/" onclick="appendToDisplay('/')">
-    <br>
-    <script>
-        function appendToDisplay(value) {
-            document.getElementById("display").value += value;
-        }
 
-        function clearDisplay() {
-            document.getElementById("display").value = '';
-        }
+  <div class="calc-wrapper">
+    <div class="calc-header">
+      <span class="calc-brand">INDUSTRIAL CALC</span>
+      <span class="calc-model">MODEL-01</span>
+    </div>
 
-        function calculate() {
-            var expression = document.getElementById("display").value;
-            try {
-                document.getElementById("display").value = eval(expression);
-            } catch (e) {
-                document.getElementById("display").value = 'Error';
-            }
+    <div class="calc-screen-housing">
+      <div class="screen-label">OUTPUT</div>
+      <div class="calc-screen">
+        <div class="calc-expression" id="expression">&nbsp;</div>
+        <div class="calc-display" id="display">0</div>
+      </div>
+      <div class="screen-screws">
+        <span class="screw"></span>
+        <span class="screw"></span>
+      </div>
+    </div>
+
+    <div class="calc-buttons">
+      <!-- Row 1 -->
+      <button class="btn btn-func" onclick="calcClear()" title="清除">C</button>
+      <button class="btn btn-func" onclick="calcToggleSign()" title="正負切換">+/−</button>
+      <button class="btn btn-func" onclick="calcPercent()" title="百分比">%</button>
+      <button class="btn btn-op" onclick="appendOp('/')" title="除法">÷</button>
+
+      <!-- Row 2 -->
+      <button class="btn btn-num" onclick="appendNum('7')">7</button>
+      <button class="btn btn-num" onclick="appendNum('8')">8</button>
+      <button class="btn btn-num" onclick="appendNum('9')">9</button>
+      <button class="btn btn-op" onclick="appendOp('*')" title="乘法">×</button>
+
+      <!-- Row 3 -->
+      <button class="btn btn-num" onclick="appendNum('4')">4</button>
+      <button class="btn btn-num" onclick="appendNum('5')">5</button>
+      <button class="btn btn-num" onclick="appendNum('6')">6</button>
+      <button class="btn btn-op" onclick="appendOp('-')">−</button>
+
+      <!-- Row 4 -->
+      <button class="btn btn-num" onclick="appendNum('1')">1</button>
+      <button class="btn btn-num" onclick="appendNum('2')">2</button>
+      <button class="btn btn-num" onclick="appendNum('3')">3</button>
+      <button class="btn btn-op" onclick="appendOp('+')">+</button>
+
+      <!-- Row 5 -->
+      <button class="btn btn-num btn-zero" onclick="appendNum('0')">0</button>
+      <button class="btn btn-num" onclick="appendDot()">.</button>
+      <button class="btn btn-eq" onclick="calcEquals()">=</button>
+    </div>
+
+    <div class="calc-footer">
+      <span class="footer-hint">⌨ 支援鍵盤輸入 &nbsp;|&nbsp; ← 退格</span>
+    </div>
+  </div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────
+    let currentInput = '0';
+    let previousInput = '';
+    let operator = null;
+    let shouldResetScreen = false;
+    let justCalculated = false;
+
+    // ── DOM ────────────────────────────────────────────────
+    const displayEl    = document.getElementById('display');
+    const expressionEl = document.getElementById('expression');
+
+    function updateDisplay(value) {
+      // Format large numbers with commas, but keep expression-safe
+      let num = parseFloat(value);
+      if (!isNaN(num) && !String(value).includes('.') && String(value).slice(-1) !== '.') {
+        displayEl.textContent = num.toLocaleString('en-US', { maximumFractionDigits: 10 });
+      } else {
+        displayEl.textContent = value;
+      }
+      // Auto-scale font
+      const len = String(value).length;
+      if (len > 12) displayEl.style.fontSize = '1.6rem';
+      else if (len > 9) displayEl.style.fontSize = '2rem';
+      else if (len > 6) displayEl.style.fontSize = '2.6rem';
+      else displayEl.style.fontSize = '3.2rem';
+    }
+
+    function setExpression(text) {
+      expressionEl.textContent = text || '\u00a0';
+    }
+
+    // ── Input handlers ─────────────────────────────────────
+    function appendNum(val) {
+      if (shouldResetScreen || currentInput === '0') {
+        currentInput = val;
+        shouldResetScreen = false;
+      } else {
+        if (currentInput.replace('-', '').length >= 15) return;
+        currentInput += val;
+      }
+      justCalculated = false;
+      updateDisplay(currentInput);
+    }
+
+    function appendDot() {
+      if (shouldResetScreen) {
+        currentInput = '0.';
+        shouldResetScreen = false;
+      } else if (!currentInput.includes('.')) {
+        currentInput += '.';
+      }
+      justCalculated = false;
+      updateDisplay(currentInput);
+    }
+
+    function appendOp(op) {
+      const opSymbols = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+      if (operator && !shouldResetScreen) {
+        calcEquals(true);
+      }
+      previousInput = currentInput;
+      operator = op;
+      shouldResetScreen = true;
+      justCalculated = false;
+      setExpression(previousInput + ' ' + opSymbols[op]);
+    }
+
+    function calcEquals(silent) {
+      if (!operator || shouldResetScreen) return;
+      const prev = parseFloat(previousInput);
+      const curr = parseFloat(currentInput);
+      let result;
+      const opSymbols = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+      const exprText = previousInput + ' ' + opSymbols[operator] + ' ' + currentInput + ' =';
+      try {
+        switch (operator) {
+          case '+': result = prev + curr; break;
+          case '-': result = prev - curr; break;
+          case '*': result = prev * curr; break;
+          case '/':
+            if (curr === 0) { currentInput = 'Error'; updateDisplay('Error'); setExpression(exprText); operator = null; return; }
+            result = prev / curr;
+            break;
         }
-    </script>
-</body>
-</html>
-<!-- partial -->
-  
+        // Handle floating point precision
+        result = parseFloat(result.toPrecision(12));
+        if (!silent) setExpression(exprText);
+        currentInput = String(result);
+        updateDisplay(currentInput);
+        operator = null;
+        shouldResetScreen = true;
+        justCalculated = true;
+      } catch(e) {
+        currentInput = 'Error';
+        updateDisplay('Error');
+      }
+    }
+
+    function calcClear() {
+      currentInput = '0';
+      previousInput = '';
+      operator = null;
+      shouldResetScreen = false;
+      justCalculated = false;
+      updateDisplay('0');
+      setExpression('');
+    }
+
+    function calcBackspace() {
+      if (shouldResetScreen || justCalculated) { calcClear(); return; }
+      if (currentInput.length <= 1 || (currentInput.length === 2 && currentInput[0] === '-')) {
+        currentInput = '0';
+      } else {
+        currentInput = currentInput.slice(0, -1);
+      }
+      updateDisplay(currentInput);
+    }
+
+    function calcToggleSign() {
+      if (currentInput === '0' || currentInput === 'Error') return;
+      currentInput = currentInput.startsWith('-') ? currentInput.slice(1) : '-' + currentInput;
+      updateDisplay(currentInput);
+    }
+
+    function calcPercent() {
+      let val = parseFloat(currentInput);
+      if (isNaN(val)) return;
+      if (operator && previousInput !== '') {
+        val = parseFloat(previousInput) * val / 100;
+      } else {
+        val = val / 100;
+      }
+      currentInput = String(parseFloat(val.toPrecision(12)));
+      updateDisplay(currentInput);
+    }
+
+    // ── Keyboard support ───────────────────────────────────
+    document.addEventListener('keydown', function(e) {
+      if (e.key >= '0' && e.key <= '9') { appendNum(e.key); ripple(e.key); }
+      else if (e.key === '.') { appendDot(); ripple('.'); }
+      else if (e.key === '+') { appendOp('+'); ripple('+'); }
+      else if (e.key === '-') { appendOp('-'); ripple('-'); }
+      else if (e.key === '*') { appendOp('*'); ripple('*'); }
+      else if (e.key === '/') { e.preventDefault(); appendOp('/'); ripple('/'); }
+      else if (e.key === 'Enter' || e.key === '=') { calcEquals(); ripple('='); }
+      else if (e.key === 'Backspace') { calcBackspace(); }
+      else if (e.key === 'Escape' || e.key === 'c' || e.key === 'C') { calcClear(); }
+      else if (e.key === '%') { calcPercent(); }
+    });
+
+    // ── Button ripple effect ───────────────────────────────
+    function ripple(key) {
+      const map = {
+        '0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9',
+        '.':'.', '+':'+', '-':'−', '*':'×', '/':'÷', '=':'='
+      };
+      const label = map[key];
+      if (!label) return;
+      document.querySelectorAll('.btn').forEach(btn => {
+        if (btn.textContent.trim() === label) {
+          btn.classList.add('active-key');
+          setTimeout(() => btn.classList.remove('active-key'), 150);
+        }
+      });
+    }
+
+    // ── Init ───────────────────────────────────────────────
+    updateDisplay('0');
+  </script>
 </body>
 </html>
